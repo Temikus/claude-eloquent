@@ -1,0 +1,67 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "claude-eloquent",
+  "description": "Keeps Claude's comments terse. A PreToolUse hook measures how much of every Edit/Write/MultiEdit is comment and bounces an over-commented edit back once with rewrite guidance; an identical resubmit is accepted. Heuristics only, no external API calls.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Artem Yakimenko"
+  },
+  "homepage": "https://github.com/Temikus/claude-eloquent",
+  "repository": "https://github.com/Temikus/claude-eloquent",
+  "license": "Apache-2.0",
+  "keywords": [
+    "comments",
+    "hooks",
+    "code-style",
+    "review",
+    "eloquent"
+  ],
+  "userConfig": {
+    "disabled": {
+      "type": "boolean",
+      "title": "Disable claude-eloquent",
+      "description": "Set to true to disable comment checking entirely",
+      "default": false
+    },
+    "comment_ratio": {
+      "type": "number",
+      "title": "Comment ratio threshold",
+      "description": "Deny an edit when comment characters exceed this fraction of the edited text. Default is 0.40",
+      "default": 0.4,
+      "min": 0,
+      "max": 1
+    },
+    "min_chars": {
+      "type": "number",
+      "title": "Minimum edit size",
+      "description": "Skip the ratio check for edits smaller than this many characters, so a small edit with one comment never trips it. Default is 200",
+      "default": 200,
+      "min": 0
+    },
+    "check_block_lines": {
+      "type": "boolean",
+      "title": "Check comment block length",
+      "description": "Also deny when any single contiguous comment block exceeds max_block_lines. Off by default",
+      "default": false
+    },
+    "max_block_lines": {
+      "type": "number",
+      "title": "Maximum comment block lines",
+      "description": "Longest allowed contiguous comment block when check_block_lines is on. Default is 6",
+      "default": 6,
+      "min": 1
+    },
+    "session_context": {
+      "type": "boolean",
+      "title": "Inject session guidance",
+      "description": "Add a short comment-style instruction at session start so denials stay rare. Default is true",
+      "default": true
+    },
+    "allow_on_retry": {
+      "type": "boolean",
+      "title": "Allow identical resubmits",
+      "description": "Accept an edit that is resubmitted unchanged after a denial, on the basis that the model judged the comments necessary. Turn off to deny every time. Default is true",
+      "default": true
+    }
+  }
+}
