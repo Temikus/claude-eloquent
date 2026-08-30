@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-30
+
 ### Changed
 
 - Hooks are Python rather than Node. macOS ships no `node`, and the Claude Code binary no longer carries one, so the hooks could not run on a stock Mac; the stock `python3` (3.9) satisfies the new 3.8+ floor. Behaviour, configuration, and environment variables are unchanged.
