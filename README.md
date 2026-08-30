@@ -30,7 +30,7 @@ What Claude sees on a denial:
 /plugin install claude-eloquent@temikus
 ```
 
-Restart Claude Code afterwards. Requires `node` on `PATH` (20+).
+Restart Claude Code afterwards. Requires `node` on `PATH` (22+).
 
 For a local working copy: `just install-dev`, then `just uninstall-dev` to clean up.
 
@@ -88,7 +88,7 @@ just test     # scanner, hook decisions, session context, cleanup
 just check    # both
 ```
 
-Tests are bash and `node`, no framework. CI runs the suite on Node 20, 22, and 24.
+Tests are bash and `node`, no framework. CI runs the suite on Node 22 and 24, the maintained LTS lines.
 
 ## Licence
 

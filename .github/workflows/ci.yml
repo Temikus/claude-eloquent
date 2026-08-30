@@ -12,9 +12,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Hooks run on whatever Node the user has on PATH, so test the maintained
-        # LTS floor up to current rather than only the newest runtime.
-        node-version: ['20', '22', '24']
+        # Hooks run on whatever Node the user has on PATH, so test every
+        # maintained LTS line: 22 is maintenance, 24 is active. Node 20 went
+        # end-of-life in March 2026.
+        node-version: ['22', '24']
     steps:
       - uses: actions/checkout@v7
 
