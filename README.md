@@ -15,9 +15,9 @@ No API calls, no extra tokens spent on scoring, no dependencies. Just a line-bas
 
 | Event | Script | Behaviour |
 | --- | --- | --- |
-| `SessionStart` | `hooks/session-context.mjs` | Injects a ~380 char comment-style instruction |
-| `PreToolUse` (`Edit\|Write\|MultiEdit`) | `hooks/check-comments.mjs` | Denies once when the edit is too commenty, allows the identical retry |
-| `SessionEnd` | `hooks/cleanup.mjs` | Removes this session's retry sentinels |
+| `SessionStart` | `hooks/session_context.py` | Injects a ~380 char comment-style instruction |
+| `PreToolUse` (`Edit\|Write\|MultiEdit`) | `hooks/check_comments.py` | Denies once when the edit is too commenty, allows the identical retry |
+| `SessionEnd` | `hooks/cleanup.py` | Removes this session's retry sentinels |
 
 What Claude sees on a denial:
 
@@ -32,7 +32,9 @@ With `allow_on_retry` off, the last sentence is replaced by "This check denies e
 /plugin install claude-eloquent@temikus
 ```
 
-Restart Claude Code afterwards. Requires `node` on `PATH` (20+).
+Restart Claude Code afterwards. Requires Python 3.8+ on `PATH`, which the stock macOS `python3` satisfies.
+
+Every hook runs through `hooks/py.sh`, which finds the interpreter. Without a usable one it says so once a day and lets edits through, rather than failing silently and leaving the check off.
 
 For a local working copy: `just install-dev`, then `just uninstall-dev` to clean up.
 
@@ -85,12 +87,12 @@ Every path that is not a confident denial exits 0 silently: malformed input, a m
 ## Development
 
 ```
-just lint     # JSON manifests + node --check
-just test     # scanner, hook decisions, session context, cleanup
+just lint     # JSON manifests, Python syntax, shim syntax
+just test     # scanner, hook decisions, session context, cleanup, runtime shim
 just check    # both
 ```
 
-Tests are bash and `node`, no framework. CI runs the suite on Node 20, 22, and 24.
+Tests are bash and Python, no framework. CI runs the suite on Python 3.9, 3.11, and 3.13, on Linux and macOS.
 
 ## Licence
 

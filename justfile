@@ -3,22 +3,18 @@ set shell := ["bash", "-uc"]
 default:
     @just --list
 
-# Validate JSON manifests and JS syntax
+# Validate JSON manifests, Python syntax, and the runtime shim
 lint:
     jq empty .claude-plugin/plugin.json
     jq empty hooks/hooks.json
-    node --check hooks/check-comments.mjs
-    node --check hooks/session-context.mjs
-    node --check hooks/cleanup.mjs
-    node --check hooks/comments.mjs
-    node --check hooks/common.mjs
-    node --check hooks/guidance.mjs
+    python3 -m py_compile hooks/check_comments.py hooks/session_context.py hooks/cleanup.py hooks/comments.py hooks/common.py hooks/guidance.py tests/comments_test.py
+    sh -n hooks/py.sh
 
 # Scanner unit tests against tests/fixtures
 test-comments:
     #!/usr/bin/env bash
     set -euo pipefail
-    node tests/comments-test.mjs
+    python3 tests/comments_test.py
 
 # PreToolUse decisions: deny once, allow on retry, skips, fail-open
 test-hook:
@@ -38,7 +34,7 @@ test-hook:
       jq -n --arg sid "$1" --arg text "$2" --arg old "${3:-OLD}" --arg fp "${4:-/tmp/sample.js}" \
         '{session_id:$sid, tool_name:"Edit", cwd:"/tmp", tool_input:{file_path:$fp, old_string:$old, new_string:$text}}'
     }
-    run() { node hooks/check-comments.mjs; }
+    run() { python3 hooks/check_comments.py; }
     ok() { echo "PASS: $1"; }
     fail() { echo "FAIL: $1" >&2; rc=1; }
 
@@ -109,9 +105,12 @@ test-hook:
     # Lines are sized so that MAX_LINES of them still exceed the 256KB rotation
     # guard, which makes the final count exact rather than "somewhere above 100".
     line=$(head -c 3000 /dev/zero | tr '\0' 'y')
-    CLAUDE_ELOQUENT_LOG="$log13" CLAUDE_ELOQUENT_LOG_MAX_LINES=100 node -e '
-      const { log } = await import("./hooks/common.mjs");
-      for (let i = 0; i < 150; i++) log("t", process.argv[1]);
+    CLAUDE_ELOQUENT_LOG="$log13" CLAUDE_ELOQUENT_LOG_MAX_LINES=100 python3 -c '
+    import sys
+    sys.path.insert(0, "hooks")
+    from common import log
+    for _ in range(150):
+        log("t", sys.argv[1])
     ' "$line"
     [ "$(wc -l < "$log13")" -eq 100 ] && ok "13 log trimmed to max lines" || fail "13 expected 100 lines, got $(wc -l < "$log13")"
 
@@ -126,15 +125,15 @@ test-context:
     export CLAUDE_ELOQUENT_LOG="$tmpdir/log"
     rc=0
 
-    out=$(echo '{"session_id":"c1","source":"startup","cwd":"/tmp"}' | node hooks/session-context.mjs)
+    out=$(echo '{"session_id":"c1","source":"startup","cwd":"/tmp"}' | python3 hooks/session_context.py)
     echo "$out" | jq -e '.hookSpecificOutput.hookEventName == "SessionStart"' >/dev/null || { echo "FAIL: wrong hookEventName" >&2; rc=1; }
     len=$(echo "$out" | jq -r '.hookSpecificOutput.additionalContext | length')
     [ "$len" -gt 0 ] && [ "$len" -lt 400 ] && echo "PASS: context present and under 400 chars ($len)" || { echo "FAIL: context length $len" >&2; rc=1; }
 
-    out=$(echo '{"session_id":"c2","cwd":"/tmp"}' | CLAUDE_ELOQUENT_SESSION_CONTEXT=0 node hooks/session-context.mjs)
+    out=$(echo '{"session_id":"c2","cwd":"/tmp"}' | CLAUDE_ELOQUENT_SESSION_CONTEXT=0 python3 hooks/session_context.py)
     [ -z "$out" ] && echo "PASS: silent when disabled" || { echo "FAIL: expected empty stdout when disabled" >&2; rc=1; }
 
-    out=$(echo '{"session_id":"c3","cwd":"/tmp"}' | CLAUDE_ELOQUENT_DISABLED=1 node hooks/session-context.mjs)
+    out=$(echo '{"session_id":"c3","cwd":"/tmp"}' | CLAUDE_ELOQUENT_DISABLED=1 python3 hooks/session_context.py)
     [ -z "$out" ] && echo "PASS: silent when plugin disabled" || { echo "FAIL: expected empty stdout when plugin disabled" >&2; rc=1; }
 
     exit $rc
@@ -152,17 +151,68 @@ test-cleanup:
     mkdir -p "$tmpdir/data/sessions/mine" "$tmpdir/data/sessions/theirs"
     touch "$tmpdir/data/sessions/mine/aaaa" "$tmpdir/data/sessions/theirs/bbbb"
 
-    echo '{"session_id":"mine","reason":"clear"}' | node hooks/cleanup.mjs
+    echo '{"session_id":"mine","reason":"clear"}' | python3 hooks/cleanup.py
     [ ! -d "$tmpdir/data/sessions/mine" ] && echo "PASS: own session dir removed" || { echo "FAIL: own session dir survived" >&2; rc=1; }
     [ -f "$tmpdir/data/sessions/theirs/bbbb" ] && echo "PASS: other session untouched" || { echo "FAIL: other session removed" >&2; rc=1; }
 
-    echo '{"session_id":"../escape"}' | node hooks/cleanup.mjs
+    echo '{"session_id":"../escape"}' | python3 hooks/cleanup.py
     [ -f "$tmpdir/data/sessions/theirs/bbbb" ] && echo "PASS: invalid session id rejected" || { echo "FAIL: path traversal not rejected" >&2; rc=1; }
 
     exit $rc
 
+# Runtime shim: interpreter discovery, version floor, and the warn-once fallback
+test-shim:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+    rc=0
+    ok() { echo "PASS: $1"; }
+    fail() { echo "FAIL: $1" >&2; rc=1; }
+
+    # A PATH with the shim's shell utilities but no interpreter, so the fallback
+    # can still write its throttle marker. The shim itself is invoked as /bin/sh,
+    # which this PATH cannot resolve.
+    utils="$tmpdir/utils"
+    mkdir -p "$utils"
+    for b in date mkdir; do ln -s "$(command -v "$b")" "$utils/$b"; done
+
+    # A python3 that reports an unsupported version, to exercise the floor
+    # separately from "no interpreter at all".
+    old="$tmpdir/old"
+    mkdir -p "$old"
+    printf '#!/bin/sh\necho 3.7\n' > "$old/python3"
+    chmod +x "$old/python3"
+    for b in date mkdir; do ln -s "$(command -v "$b")" "$old/$b"; done
+
+    # Matched with contains(), not test(): the "+" in "3.8+" is a regex quantifier.
+    warning='no working Python 3.8+ interpreter'
+
+    # 1. A usable interpreter runs the hook, and the hook decides.
+    out=$(echo '{"session_id":"h1","tool_name":"Edit","cwd":"/tmp","tool_input":{"file_path":"/tmp/a.js","old_string":"x","new_string":"const a = 1;"}}' \
+      | CLAUDE_ELOQUENT_TMP="$tmpdir/d1" sh hooks/py.sh hooks/check_comments.py)
+    [ -z "$out" ] && ok "1 shim execs the hook" || fail "1 expected empty stdout, got: $out"
+
+    # 2. No interpreter: warn once, exit 0, never deny.
+    out=$(env PATH="$utils" HOME="$tmpdir" CLAUDE_ELOQUENT_TMP="$tmpdir/d2" /bin/sh hooks/py.sh hooks/check_comments.py </dev/null)
+    ec=$?
+    [ "$ec" -eq 0 ] && ok "2 exits 0 without an interpreter" || fail "2 expected exit 0, got $ec"
+    echo "$out" | jq -e --arg w "$warning" '.systemMessage | contains($w)' >/dev/null && ok "2 warns via systemMessage" || fail "2 expected the warning, got: $out"
+    echo "$out" | jq -e 'has("hookSpecificOutput") | not' >/dev/null && ok "2 emits no permission decision" || fail "2 fallback must not decide"
+
+    # 3. The warning is throttled, or it would repeat on every edit.
+    out=$(env PATH="$utils" HOME="$tmpdir" CLAUDE_ELOQUENT_TMP="$tmpdir/d2" /bin/sh hooks/py.sh hooks/check_comments.py </dev/null)
+    [ -z "$out" ] && ok "3 second run is silent" || fail "3 expected silence, got: $out"
+    [ -n "$(find "$tmpdir/d2" -name 'no-python-*' -type f)" ] && ok "3 throttle marker written" || fail "3 expected a throttle marker"
+
+    # 4. An interpreter below the floor is rejected, not used.
+    out=$(env PATH="$old" HOME="$tmpdir" CLAUDE_ELOQUENT_TMP="$tmpdir/d4" /bin/sh hooks/py.sh hooks/check_comments.py </dev/null)
+    echo "$out" | jq -e --arg w "$warning" '.systemMessage | contains($w)' >/dev/null && ok "4 python 3.7 rejected" || fail "4 expected the version floor to reject 3.7, got: $out"
+
+    exit $rc
+
 # Run all tests
-test: test-comments test-hook test-context test-cleanup
+test: test-comments test-hook test-context test-cleanup test-shim
 
 # Lint + all tests
 check: lint test
