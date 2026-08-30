@@ -48,7 +48,13 @@ function pruneSentinels(dir) {
 try {
   if (bool(DISABLED)) process.exit(0);
 
-  const event = JSON.parse(readStdin());
+  const { text: payload, truncated } = readStdin();
+  if (truncated) {
+    log('check', 'SKIP: payload over 8MB');
+    process.exit(0);
+  }
+
+  const event = JSON.parse(payload);
   const toolName = event.tool_name ?? '';
   const input = event.tool_input ?? {};
   const filePath = input.file_path;

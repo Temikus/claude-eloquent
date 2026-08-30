@@ -96,6 +96,12 @@ test-hook:
     echo "$out" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("[0-9]+% comment")' >/dev/null && ok "11 reason quotes the percentage" || fail "11 reason missing percentage"
     echo "$out" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("resubmit the same edit")' >/dev/null && ok "11 reason offers the retry" || fail "11 reason missing retry sentence"
 
+    # 12. A payload past the read cap is skipped, not parsed into a bogus error.
+    big=$(head -c 9000000 /dev/zero | tr '\0' 'x')
+    log12="$tmpdir/log12"
+    out=$(printf '{"session_id":"s12","tool_name":"Edit","cwd":"/tmp","tool_input":{"file_path":"/tmp/sample.js","old_string":"OLD","new_string":"%s"}}' "$big" | CLAUDE_ELOQUENT_LOG="$log12" run)
+    [ -z "$out" ] && grep -q 'SKIP: payload' "$log12" && ok "12 oversized payload skipped" || fail "12 expected payload skip"
+
     exit $rc
 
 # SessionStart context injection

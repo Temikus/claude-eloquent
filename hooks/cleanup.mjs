@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { log, readStdin, validSessionId, SESSIONS_DIR } from './common.mjs';
 
 try {
-  const event = JSON.parse(readStdin(65536));
+  const event = JSON.parse(readStdin(65536).text);
   const sessionId = event.session_id ?? '';
   if (!validSessionId(sessionId)) process.exit(0);
 

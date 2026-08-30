@@ -42,6 +42,9 @@ export function validSessionId(id) {
   return typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id);
 }
 
-export function readStdin(maxBytes = 1024 * 1024) {
-  return readFileSync(0).slice(0, maxBytes).toString('utf8');
+// `truncated` tells the caller the payload was cut, so it can skip rather than
+// fail on a JSON parse error it cannot explain.
+export function readStdin(maxBytes = 8 * 1024 * 1024) {
+  const buf = readFileSync(0);
+  return { text: buf.slice(0, maxBytes).toString('utf8'), truncated: buf.length > maxBytes };
 }
