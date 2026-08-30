@@ -9,8 +9,10 @@ import { basename, extname } from 'node:path';
 
 const FAMILIES = {
   c: { line: ['//'], block: [['/*', '*/']] },
-  hash: { line: ['#'], block: [] },
-  py: { line: ['#'], block: [['"""', '"""'], ["'''", "'''"]] },
+  hash: { line: ['#'], block: [], heredoc: /<<-?\s*['"]?(\w+)['"]?/ },
+  // docstringOnly: a triple quote with code before it is a string literal, not
+  // a docstring, so it must not open a comment block.
+  py: { line: ['#'], block: [['"""', '"""'], ["'''", "'''"]], docstringOnly: true },
   rb: { line: ['#'], block: [['=begin', '=end']] },
   lua: { line: ['--'], block: [['--[[', ']]']] },
   sql: { line: ['--'], block: [] },
@@ -46,8 +48,10 @@ export const SKIP_EXT = new Set([
 
 // Comments that exist for a tool or a lawyer, not for a reader. Excluded from
 // both the comment count and the total, so they neither trip nor mask a denial.
-const LINT_MARKERS = /(eslint-|noqa|nolint|prettier-ignore|type:\s*ignore|pragma|TODO\(|FIXME\(|@ts-|istanbul ignore|rubocop:|shellcheck |golint|deprecated:)/i;
-const LICENSE_MARKERS = /(SPDX-|Copyright|Licensed under|All rights reserved)/i;
+// Anchored: `^\W*` allows the comment prefix before the word, so `// Deprecated:
+// use X` matches and `// this is deprecated: see above` does not.
+const LINT_MARKERS = /(\beslint-|\bnoqa\b|\bnolint\b|prettier-ignore|type:\s*ignore|\bpragma\b|\bTODO\(|\bFIXME\(|@ts-|istanbul ignore|rubocop:|shellcheck\s|\bgolint\b|^\W*deprecated:)/i;
+const LICENSE_MARKERS = /(\bSPDX-|^\W*Copyright\b|^\W*Licensed under\b|\bAll rights reserved\b)/i;
 
 export function detectLang(filePath) {
   if (!filePath) return null;
@@ -107,6 +111,10 @@ export function extractComments(text, lang) {
   const blocks = [];
   let current = null;
   let closer = null;
+  // Open string literal (heredoc or triple quote). Same shape as `closer`, but
+  // its lines go to totalChars only. Either a literal to find, or a predicate
+  // on the trimmed line for heredoc terminators.
+  let stringCloser = null;
 
   const startBlock = (lineNo) => {
     if (!current) { current = { startLine: lineNo, lines: 0, chars: 0 }; blocks.push(current); }
@@ -117,6 +125,13 @@ export function extractComments(text, lang) {
     const raw = lines[i];
     const trimmed = raw.trim();
     const lineNo = i + 1;
+
+    if (stringCloser !== null) {
+      totalChars += trimmed.length;
+      endBlock();
+      if (typeof stringCloser === 'function' ? stringCloser(trimmed) : raw.includes(stringCloser)) stringCloser = null;
+      continue;
+    }
 
     if (closer === null) {
       if (i === 0 && trimmed.startsWith('#!')) continue;
@@ -148,6 +163,16 @@ export function extractComments(text, lang) {
 
     if (trimmed === '') { endBlock(); continue; }
 
+    if (fam.heredoc && !isCommentish(trimmed, lineMarkers, openers)) {
+      const m = fam.heredoc.exec(raw);
+      if (m) {
+        const tag = m[1];
+        stringCloser = (t) => t === tag;
+        endBlock();
+        continue;
+      }
+    }
+
     const lineHit = findMarker(raw, lineMarkers);
     const blockHit = findMarker(raw, openers);
     const hit = pickEarliest(lineHit, blockHit);
@@ -156,6 +181,13 @@ export function extractComments(text, lang) {
 
     const isLineComment = lineHit && hit.index === lineHit.index && hit.marker === lineHit.marker;
     const codeBefore = raw.slice(0, hit.index).trim();
+
+    if (!isLineComment && fam.docstringOnly && codeBefore) {
+      const [open, close] = fam.block.find(([o]) => o === hit.marker);
+      if (raw.indexOf(close, hit.index + open.length) === -1) stringCloser = close;
+      endBlock();
+      continue;
+    }
 
     if (isLineComment) {
       const commentPart = raw.slice(hit.index).trim();

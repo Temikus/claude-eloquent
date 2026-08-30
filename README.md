@@ -23,6 +23,8 @@ What Claude sees on a denial:
 
 > claude-eloquent: this edit to `src/parse.js` is 71% comment (2 comment blocks, longest 9 lines). Rewrite the comments before resubmitting. Keep only what a reader of this code cannot infer from the code itself: non-obvious intent, invariants, dangers, quirks of an external API, and why an unusual choice was made. Remove narration of what the code does, implementation history, references to old behaviour, "previously"/"now"/"the win here" phrasing, and anything that restates the identifier names. If every remaining comment is genuinely needed, resubmit the same edit unchanged and it will be accepted.
 
+With `allow_on_retry` off, the last sentence is replaced by "This check denies every time; reduce the comments."
+
 ## Install
 
 ```

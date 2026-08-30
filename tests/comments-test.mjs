@@ -41,9 +41,26 @@ check('docstring.py', scan('docstring.py'), {
   lang: 'py', commentChars: 88, totalChars: 135, blocks: [[2, 4, 39], [9, 2, 49]],
 });
 
+// A `SQL = """` assignment is a string, not a docstring: only the docstring
+// and the trailing comment count.
+check('multistring.py', scan('multistring.py'), {
+  lang: 'py', commentChars: 54, totalChars: 109, blocks: [[2, 4, 34]],
+});
+
+// `#` lines inside a heredoc are data; only the comment after EOF counts.
+check('heredoc.sh', scan('heredoc.sh'), {
+  lang: 'hash', commentChars: 35, totalChars: 92, blocks: [[6, 1, 35]],
+});
+
 // SPDX and Copyright lines drop out of both counts.
 check('license.go', scan('license.go'), {
   lang: 'c', commentChars: 22, totalChars: 71, blocks: [[5, 1, 22]],
+});
+
+// Near-misses ("pragmatic", "the copyright holder", "deprecated in v2") count;
+// the anchored directives beside them do not.
+check('markers.js', scan('markers.js'), {
+  lang: 'c', commentChars: 107, totalChars: 134, blocks: [[2, 3, 107]],
 });
 
 // eslint directives drop out; the prose comment beside them does not.

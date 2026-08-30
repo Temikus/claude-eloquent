@@ -13,7 +13,7 @@ try {
   if (bool(DISABLED) || !bool(SESSION_CONTEXT)) process.exit(0);
 
   let event = {};
-  try { event = JSON.parse(readStdin(65536)); } catch { /* context does not depend on the payload */ }
+  try { event = JSON.parse(readStdin(65536).text); } catch { /* context does not depend on the payload */ }
 
   if (event.cwd && existsSync(join(event.cwd, '.claude-eloquent-skip'))) process.exit(0);
 

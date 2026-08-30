@@ -5,8 +5,13 @@
 const KEEP = 'Keep only what a reader of this code cannot infer from the code itself: non-obvious intent, invariants, dangers, quirks of an external API, and why an unusual choice was made.';
 const DROP = 'Remove narration of what the code does, implementation history, references to old behaviour, "previously"/"now"/"the win here" phrasing, and anything that restates the identifier names.';
 
-export function denyReason({ file, percent, blocks, longestBlock }) {
-  return `claude-eloquent: this edit to ${file} is ${percent}% comment (${blocks} comment ${blocks === 1 ? 'block' : 'blocks'}, longest ${longestBlock} ${longestBlock === 1 ? 'line' : 'lines'}). Rewrite the comments before resubmitting. ${KEEP} ${DROP} If every remaining comment is genuinely needed, resubmit the same edit unchanged and it will be accepted.`;
+// The closing sentence depends on allow_on_retry: promising a resubmit that the
+// hook then denies again sends the model into a loop it cannot exit.
+export function denyReason({ file, percent, blocks, longestBlock, allowRetry = true }) {
+  const ending = allowRetry
+    ? 'If every remaining comment is genuinely needed, resubmit the same edit unchanged and it will be accepted.'
+    : 'This check denies every time; reduce the comments.';
+  return `claude-eloquent: this edit to ${file} is ${percent}% comment (${blocks} comment ${blocks === 1 ? 'block' : 'blocks'}, longest ${longestBlock} ${longestBlock === 1 ? 'line' : 'lines'}). Rewrite the comments before resubmitting. ${KEEP} ${DROP} ${ending}`;
 }
 
 // Kept under 400 chars: it is prepended to every session, so it pays rent on

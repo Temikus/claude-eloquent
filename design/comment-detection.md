@@ -36,7 +36,8 @@ Unknown extensions and prose/data extensions (`md`, `mdx`, `txt`, `rst`, `adoc`,
 - A marker only registers at the start of a line or after whitespace. That is what keeps `$#`, `${#arr}`, and `a//b` from reading as comments. The cost is missing a spaceless trailing comment (`);// x`), which is the safe direction to err.
 - Quote tracking is naive and resets at every newline: a marker inside a string literal opened earlier on the same line is ignored, but a marker inside a multi-line string can still be misread.
 - Contiguous comment lines form one block. A blank line or a code line ends it.
-- In Python, a `"""` or `'''` at the start of a statement opens a block, which covers docstrings. A blank line inside an open block does not split it.
+- In Python, a `"""` or `'''` opens a comment block only when nothing but whitespace precedes it on the line, which covers docstrings. With code before it (`sql = """`) the line counts as code and the string runs to its closing quotes without being counted at all. A blank line inside an open block does not split it.
+- In the hash family, a line opening a heredoc (`cat <<EOF`, `<<-'EOF'`) starts a string that runs until a line whose trimmed text equals the tag. Everything between counts as code, so `#` lines inside a heredoc are not comments.
 - Character counts use trimmed line lengths, so indentation moves neither the comment count nor the total.
 
 ## Exclusions
@@ -46,6 +47,8 @@ Dropped from **both** `commentChars` and `totalChars`, so they neither trip a de
 - A shebang on line 1.
 - Licence headers in the first 10 lines: `SPDX-`, `Copyright`, `Licensed under`, `All rights reserved`.
 - Lint and tooling directives anywhere: `eslint-`, `noqa`, `nolint`, `prettier-ignore`, `type: ignore`, `pragma`, `TODO(`, `FIXME(`, `@ts-`, `istanbul ignore`, `rubocop:`, `shellcheck `, `golint`, `deprecated:`.
+
+The words are matched on word boundaries, and `Copyright`, `Licensed under`, and `deprecated:` must open the comment (only the comment prefix may precede them). So `// Deprecated: use X` drops out but `// pragmatic`, `// the copyright holder`, and `// deprecated in v2` do not.
 
 ## Thresholds
 
@@ -65,6 +68,6 @@ Sentinels older than two hours are pruned on each invocation, and `SessionEnd` r
 
 ## Known limitations
 
-- Multi-line strings containing comment markers can inflate the comment count. A retry clears it.
+- Multi-line strings outside Python triple quotes and shell heredocs are still untracked, so a comment marker inside a JS template literal can inflate the count. A retry clears it.
 - JSX/TSX `{/* */}` is read as a C-like block comment, which is correct often enough.
-- Heredocs in shell are not tracked, so a `#` inside one can be counted.
+- Only the identifier form of heredoc is tracked. A `<<` followed by anything other than a word (a `<<<` here-string aside, which is single-line) is not.
