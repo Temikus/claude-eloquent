@@ -16,8 +16,10 @@ No API calls, no extra tokens spent on scoring, no dependencies. Just a line-bas
 | Event | Script | Behaviour |
 | --- | --- | --- |
 | `SessionStart` | `hooks/session-context.mjs` | Injects a ~380 char comment-style instruction |
-| `PreToolUse` (`Edit\|Write\|MultiEdit`) | `hooks/check-comments.mjs` | Denies once when the edit is too commenty, allows the identical retry |
+| `PreToolUse` (`Edit\|Write`) | `hooks/check-comments.mjs` | Denies once when the edit is too commenty, allows the identical retry |
 | `SessionEnd` | `hooks/cleanup.mjs` | Removes this session's retry sentinels |
+
+`SessionStart` fires on startup, resume, clear, and compaction. Re-injecting after a compaction is deliberate: the summary may have dropped the rule, and the note is ~380 characters.
 
 What Claude sees on a denial:
 

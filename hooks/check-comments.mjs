@@ -24,6 +24,7 @@ const EXTRA_SKIP_EXT = (process.env.CLAUDE_ELOQUENT_EXTRA_SKIP_EXT ?? '')
 function analysedText(toolName, input) {
   if (toolName === 'Write') return typeof input.content === 'string' ? input.content : null;
   if (toolName === 'Edit') return typeof input.new_string === 'string' ? input.new_string : null;
+  // Retained for older clients: current Claude Code no longer ships MultiEdit.
   if (toolName === 'MultiEdit') {
     if (!Array.isArray(input.edits)) return null;
     return input.edits.map(e => (typeof e?.new_string === 'string' ? e.new_string : '')).join('\n');

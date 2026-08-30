@@ -73,6 +73,7 @@ test-hook:
     [ -z "$out" ] && [ ! -s "$log6" ] && ok "6 markdown skipped silently" || fail "6 expected silent doc-ext skip"
 
     # 7. MultiEdit concatenates its edits, so one commenty edit is enough.
+    #    Retained for older clients; current Claude Code no longer ships the tool.
     out=$(jq -n --arg text "$commenty" '{session_id:"s7", tool_name:"MultiEdit", cwd:"/tmp", tool_input:{file_path:"/tmp/sample.js", edits:[{old_string:"a",new_string:"const a = 1;"},{old_string:"b",new_string:$text},{old_string:"c",new_string:"const c = 3;"}]}}' | run)
     echo "$out" | grep -q '"permissionDecision":"deny"' && ok "7 MultiEdit denied" || fail "7 expected deny, got: $out"
 
