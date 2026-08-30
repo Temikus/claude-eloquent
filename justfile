@@ -90,9 +90,10 @@ test-hook:
     out=$(payload s8b "$blocky" | CLAUDE_ELOQUENT_CHECK_BLOCK_LINES=1 run)
     echo "$out" | grep -q '"permissionDecision":"deny"' && ok "8 long block denied when enabled" || fail "8 expected deny with detector on, got: $out"
 
-    # 9. Malformed stdin fails open.
+    # 9. Malformed stdin fails open, but leaves a trace in the log.
     out=$(printf 'not json' | run) && ec=$? || ec=$?
     [ "$ec" -eq 0 ] && [ -z "$out" ] && ok "9 malformed stdin fails open" || fail "9 expected silent exit 0"
+    grep -q 'ERROR' "$tmpdir/log" && ok "9 parse failure logged" || fail "9 expected ERROR in the log"
 
     # 10. Project opt-out file.
     skipdir="$tmpdir/skipproj"
@@ -122,6 +123,14 @@ test-hook:
       for (let i = 0; i < 150; i++) log("t", process.argv[1]);
     ' "$line"
     [ "$(wc -l < "$log13")" -eq 100 ] && ok "13 log trimmed to max lines" || fail "13 expected 100 lines, got $(wc -l < "$log13")"
+
+    # 13. The plugin-option variable is read when no env override is set.
+    out=$(payload s13 "$commenty" | CLAUDE_PLUGIN_OPTION_COMMENT_RATIO=0.99 run)
+    [ -z "$out" ] && ok "13 plugin option raises the threshold" || fail "13 expected empty stdout, got: $out"
+
+    # 14. Env wins over the plugin option.
+    out=$(payload s14 "$commenty" | CLAUDE_PLUGIN_OPTION_COMMENT_RATIO=0.99 CLAUDE_ELOQUENT_RATIO=0.10 run)
+    echo "$out" | grep -q '"permissionDecision":"deny"' && ok "14 env overrides the plugin option" || fail "14 expected deny, got: $out"
 
     exit $rc
 

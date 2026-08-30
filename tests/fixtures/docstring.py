@@ -1,3 +1,5 @@
+# Expect: docstring block 4-7, comment block 11-12.
+
 def add(a, b):
     """Adds two numbers.
 
