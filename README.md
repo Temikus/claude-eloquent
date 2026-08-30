@@ -27,9 +27,18 @@ With `allow_on_retry` off, the last sentence is replaced by "This check denies e
 
 ## Install
 
+From within a Claude Code session:
+
 ```
 /plugin marketplace add Temikus/claude-plugins
 /plugin install claude-eloquent@temikus
+```
+
+Or from the console, without starting a session:
+
+```
+claude plugin marketplace add Temikus/claude-plugins
+claude plugin install claude-eloquent@temikus
 ```
 
 Restart Claude Code afterwards. Requires Python 3.8+ on `PATH`, which the stock macOS `python3` satisfies.
