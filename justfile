@@ -146,25 +146,36 @@ test: test-comments test-hook test-context test-cleanup
 # Lint + all tests
 check: lint test
 
-# Create a release: just release [patch|minor|major]
-release segment="patch":
+# Create a release: just release [patch|minor|major] [confirm=yes]
+release segment="patch" confirm="no": check
     #!/usr/bin/env bash
     set -euo pipefail
     manifest=".claude-plugin/plugin.json"
-    latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+    changelog="CHANGELOG.md"
+    latest=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || echo "v0.0.0")
     IFS='.' read -r major minor patch <<< "${latest#v}"
     case "{{segment}}" in
       major) major=$((major + 1)); minor=0; patch=0 ;;
       minor) minor=$((minor + 1)); patch=0 ;;
       patch) patch=$((patch + 1)) ;;
-      *) echo "Usage: just release [patch|minor|major]"; exit 1 ;;
+      *) echo "Usage: just release [patch|minor|major] [confirm=yes]"; exit 1 ;;
     esac
     new="v${major}.${minor}.${patch}"
     bare="${new#v}"
+    echo "Planned release: ${latest} -> ${new}"
+    if [ "{{confirm}}" != "yes" ]; then
+      echo "Nothing changed. Re-run with confirm=yes to commit, tag, and push:"
+      echo "  just release {{segment}} yes"
+      exit 0
+    fi
     jq --arg v "$bare" '.version = $v' "$manifest" > "${manifest}.tmp" && mv "${manifest}.tmp" "$manifest"
-    git add "$manifest"
+    # Leave a fresh empty Unreleased section above the new version heading.
+    # $'\\\n' is a backslash-newline pair, which both GNU and BSD sed accept in a replacement.
+    nl=$'\\\n'
+    repl="## [Unreleased]${nl}${nl}## [${bare}] - $(date +%Y-%m-%d)"
+    sed "s|^## \[Unreleased\]\$|${repl}|" "$changelog" > "${changelog}.tmp" && mv "${changelog}.tmp" "$changelog"
+    git add "$manifest" "$changelog"
     git commit -m "release: bump version to ${bare}"
-    echo "Tagging ${latest} -> ${new}"
     git tag -a "$new" -m "Release ${new}"
     git push origin HEAD --follow-tags
     echo "Released ${new}"
