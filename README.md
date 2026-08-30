@@ -62,7 +62,7 @@ Environment-only settings:
 | Variable | Default |
 | --- | --- |
 | `CLAUDE_ELOQUENT_LOG` | `~/.claude/logs/claude-eloquent.log` |
-| `CLAUDE_ELOQUENT_LOG_MAX_LINES` | `1000` |
+| `CLAUDE_ELOQUENT_LOG_MAX_LINES` | `1000` (trim target, applied once the log passes 256 KB) |
 | `CLAUDE_ELOQUENT_TMP` | `~/.claude/tmp/claude-eloquent` |
 | `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` | (empty) comma-separated extensions to ignore |
 
@@ -80,7 +80,7 @@ Never counted against you: shebangs, licence headers (`SPDX`, `Copyright`, `Lice
 
 Comment text is never logged. The log records file paths, sizes, percentages, and decisions only.
 
-Every path that is not a confident denial exits 0 silently: malformed input, a missing `file_path`, an unknown extension, a scanner exception, an unwritable sentinel directory, or a missing session id. A hook that cannot decide lets the edit through.
+Every path that is not a confident denial exits 0 silently: malformed input, a payload over 8 MB, a missing `file_path`, an unknown extension, a scanner exception, an unwritable sentinel directory, or a missing session id. A hook that cannot decide lets the edit through.
 
 ## Development
 

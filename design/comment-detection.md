@@ -37,7 +37,7 @@ Unknown extensions and prose/data extensions (`md`, `mdx`, `txt`, `rst`, `adoc`,
 - Quote tracking is naive and resets at every newline: a marker inside a string literal opened earlier on the same line is ignored, but a marker inside a multi-line string can still be misread.
 - Contiguous comment lines form one block. A blank line or a code line ends it.
 - In Python, a `"""` or `'''` opens a comment block only when nothing but whitespace precedes it on the line, which covers docstrings. With code before it (`sql = """`) the line counts as code and the string runs to its closing quotes without being counted at all. A blank line inside an open block does not split it.
-- In the hash family, a line opening a heredoc (`cat <<EOF`, `<<-'EOF'`) starts a string that runs until a line whose trimmed text equals the tag. Everything between counts as code, so `#` lines inside a heredoc are not comments.
+- In the hash family, a heredoc (`cat <<EOF`, `<<-'EOF'`) starts a string that runs until a line whose trimmed text equals the tag. Everything between counts as code, so `#` lines inside a heredoc are not comments. The opener is matched loosely; see the limitations below for what else it catches.
 - Character counts use trimmed line lengths, so indentation moves neither the comment count nor the total.
 
 ## Exclusions
@@ -48,7 +48,7 @@ Dropped from **both** `commentChars` and `totalChars`, so they neither trip a de
 - Licence headers in the first 10 lines: `SPDX-`, `Copyright`, `Licensed under`, `All rights reserved`.
 - Lint and tooling directives anywhere: `eslint-`, `noqa`, `nolint`, `prettier-ignore`, `type: ignore`, `pragma`, `TODO(`, `FIXME(`, `@ts-`, `istanbul ignore`, `rubocop:`, `shellcheck `, `golint`, `deprecated:`.
 
-The words are matched on word boundaries, and `Copyright`, `Licensed under`, and `deprecated:` must open the comment (only the comment prefix may precede them). So `// Deprecated: use X` drops out but `// pragmatic`, `// the copyright holder`, and `// deprecated in v2` do not.
+Most words are matched on word boundaries, and `Copyright`, `Licensed under`, and `deprecated:` must open the comment (only the comment prefix may precede them). So `// Deprecated: use X` drops out but `// pragmatic`, `// the copyright holder`, and `// deprecated in v2` do not. `type: ignore`, `istanbul ignore`, `rubocop:`, `prettier-ignore`, and `All rights reserved` are still unanchored, so prose containing one of them is dropped from both counts.
 
 ## Thresholds
 
@@ -66,8 +66,14 @@ Sentinel path: `${CLAUDE_ELOQUENT_TMP}/sessions/<session_id>/<sha256(file_path +
 
 Sentinels older than two hours are pruned on each invocation, and `SessionEnd` removes the session directory outright.
 
+## Operational limits
+
+A hook payload over 8 MB is skipped without scanning: the read is capped, so the JSON would be truncated and unparseable. The log records `SKIP: payload over 8MB` and the edit is allowed.
+
+The log is trimmed to `CLAUDE_ELOQUENT_LOG_MAX_LINES` from `log()` itself, but only once the file passes 256 KB. That guard keeps the common case to one `stat`, at the cost of `MAX_LINES` being a trim target rather than a hard ceiling: with short lines the file can hold several times that many before a trim is considered.
+
 ## Known limitations
 
 - Multi-line strings outside Python triple quotes and shell heredocs are still untracked, so a comment marker inside a JS template literal can inflate the count. A retry clears it.
 - JSX/TSX `{/* */}` is read as a C-like block comment, which is correct often enough.
-- Only the identifier form of heredoc is tracked. A `<<` followed by anything other than a word (a `<<<` here-string aside, which is single-line) is not.
+- Heredoc detection matches any `<<` or `<<<` followed by a word, anywhere on a code line, with no check that it is a redirection. So `n=$(( 1 << 2 ))`, `grep foo <<< bar`, and even `x=1  # see <<EOF below` each open a string that runs to the end of the file, and every comment after it goes uncounted. This errs toward allowing the edit, but it disables the check for the rest of the file rather than for one line.
