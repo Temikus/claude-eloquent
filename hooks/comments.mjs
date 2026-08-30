@@ -53,21 +53,16 @@ export const SKIP_EXT = new Set([
 const LINT_MARKERS = /(\beslint-|\bnoqa\b|\bnolint\b|prettier-ignore|type:\s*ignore|\bpragma\b|\bTODO\(|\bFIXME\(|@ts-|istanbul ignore|rubocop:|shellcheck\s|\bgolint\b|^\W*deprecated:)/i;
 const LICENSE_MARKERS = /(\bSPDX-|^\W*Copyright\b|^\W*Licensed under\b|\bAll rights reserved\b)/i;
 
-export function detectLang(filePath) {
+// `extraSkip` holds user-supplied entries: an extension (no leading dot) or the
+// bare name of an extensionless file the scanner would otherwise recognise.
+export function detectLang(filePath, extraSkip = []) {
   if (!filePath) return null;
   const name = basename(filePath).toLowerCase();
-  if (BY_NAME[name]) return BY_NAME[name];
+  if (BY_NAME[name]) return extraSkip.includes(name) ? null : BY_NAME[name];
   const ext = extname(name).slice(1);
   if (!ext) return null;
-  if (SKIP_EXT.has(ext)) return null;
+  if (SKIP_EXT.has(ext) || extraSkip.includes(ext)) return null;
   return BY_EXT[ext] ?? null;
-}
-
-export function isSkippedExt(filePath, extraSkip = []) {
-  if (!filePath) return true;
-  const ext = extname(basename(filePath).toLowerCase()).slice(1);
-  if (!ext) return false;
-  return SKIP_EXT.has(ext) || extraSkip.includes(ext);
 }
 
 // Earliest occurrence of any marker that is not inside a string literal opened

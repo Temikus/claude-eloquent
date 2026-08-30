@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { extractComments, detectLang, isSkippedExt, summarise } from '../hooks/comments.mjs';
+import { extractComments, detectLang, summarise } from '../hooks/comments.mjs';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 let failures = 0;
@@ -90,7 +90,8 @@ check('trailing comment is not a block', extractComments('x();  // why\ny();', '
 
 check('detectLang skips prose', [detectLang('a.md'), detectLang('a.json'), detectLang('a.unknownext')], [null, null, null]);
 check('detectLang by filename', [detectLang('Dockerfile'), detectLang('/x/justfile'), detectLang('Gemfile')], ['hash', 'hash', 'rb']);
-check('isSkippedExt honours extras', [isSkippedExt('a.md'), isSkippedExt('a.js'), isSkippedExt('a.js', ['js'])], [true, false, true]);
+check('detectLang honours extra extensions', [detectLang('a.js'), detectLang('a.js', ['js'])], ['c', null]);
+check('detectLang honours extra filenames', [detectLang('/x/justfile', ['justfile']), detectLang('/x/justfile', ['js'])], [null, 'hash']);
 
 check('summarise', summarise({ commentChars: 60, totalChars: 100, blocks: [{ lines: 3 }, { lines: 7 }] }),
   { ratio: 0.6, longestBlock: 7, blockCount: 2 });

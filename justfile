@@ -72,6 +72,13 @@ test-hook:
     out=$(payload s6 "$commenty" OLD /tmp/notes.md | CLAUDE_ELOQUENT_LOG="$log6" run)
     [ -z "$out" ] && [ ! -s "$log6" ] && ok "6 markdown skipped silently" || fail "6 expected silent doc-ext skip"
 
+    # 6b. CLAUDE_ELOQUENT_EXTRA_SKIP takes a bare filename, and the old
+    #     CLAUDE_ELOQUENT_EXTRA_SKIP_EXT name still works as an alias.
+    out=$(payload s6b "$commenty" OLD /tmp/justfile | CLAUDE_ELOQUENT_EXTRA_SKIP=justfile run)
+    [ -z "$out" ] && ok "6b extra skip by filename" || fail "6b expected empty stdout, got: $out"
+    out=$(payload s6c "$commenty" | CLAUDE_ELOQUENT_EXTRA_SKIP_EXT=js run)
+    [ -z "$out" ] && ok "6c legacy extra-skip alias honoured" || fail "6c expected empty stdout, got: $out"
+
     # 7. MultiEdit concatenates its edits, so one commenty edit is enough.
     #    Retained for older clients; current Claude Code no longer ships the tool.
     out=$(jq -n --arg text "$commenty" '{session_id:"s7", tool_name:"MultiEdit", cwd:"/tmp", tool_input:{file_path:"/tmp/sample.js", edits:[{old_string:"a",new_string:"const a = 1;"},{old_string:"b",new_string:$text},{old_string:"c",new_string:"const c = 3;"}]}}' | run)

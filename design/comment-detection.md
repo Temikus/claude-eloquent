@@ -26,7 +26,7 @@ Detection is by extension of `tool_input.file_path`, falling back to the filenam
 | HTML-ish | none | `<!-- -->` | html, htm, vue, svelte, xml |
 | CSS | none | `/* */` | css, scss, less |
 
-Unknown extensions and prose/data extensions (`md`, `mdx`, `txt`, `rst`, `adoc`, `json`, `yaml`, `yml`, `toml`, `csv`, `tsv`, `lock`, `ini`, `cfg`, `conf`, `env`, `properties`, `svg`, `patch`, `diff`, `snap`) exit before any scanning. `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` adds to that list.
+Unknown extensions and prose/data extensions (`md`, `mdx`, `txt`, `rst`, `adoc`, `json`, `yaml`, `yml`, `toml`, `csv`, `tsv`, `lock`, `ini`, `cfg`, `conf`, `env`, `properties`, `svg`, `patch`, `diff`, `snap`) exit before any scanning. `CLAUDE_ELOQUENT_EXTRA_SKIP` adds to that list: an entry is either an extension or the bare name of an extensionless file from the fallback table, so `sql,justfile` skips both. `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` is the former name and still works.
 
 ## Rules
 
@@ -82,4 +82,4 @@ The log is trimmed to `CLAUDE_ELOQUENT_LOG_MAX_LINES` from `log()` itself, but o
 - A Rust lifetime (`'a`) opens a phantom quote, so a `//` comment later on that line is missed.
 - An HTML comment not preceded by whitespace (`<div><!-- x -->`) is missed.
 
-All three err toward allowing the edit, so none is worth code to fix.
+The last three err toward allowing the edit, so none is worth code to fix.

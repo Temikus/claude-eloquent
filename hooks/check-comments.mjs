@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { cfg, bool, log, readStdin, validSessionId, SESSIONS_DIR, SENTINEL_TTL_MS } from './common.mjs';
-import { detectLang, isSkippedExt, extractComments, summarise } from './comments.mjs';
+import { detectLang, extractComments, summarise } from './comments.mjs';
 import { denyReason } from './guidance.mjs';
 
 const DISABLED = cfg('CLAUDE_ELOQUENT_DISABLED', 'CLAUDE_PLUGIN_OPTION_DISABLED', '0');
@@ -18,7 +18,8 @@ const MIN_CHARS = parseInt(cfg('CLAUDE_ELOQUENT_MIN_CHARS', 'CLAUDE_PLUGIN_OPTIO
 const CHECK_BLOCK_LINES = cfg('CLAUDE_ELOQUENT_CHECK_BLOCK_LINES', 'CLAUDE_PLUGIN_OPTION_CHECK_BLOCK_LINES', '0');
 const MAX_BLOCK_LINES = parseInt(cfg('CLAUDE_ELOQUENT_MAX_BLOCK_LINES', 'CLAUDE_PLUGIN_OPTION_MAX_BLOCK_LINES', '6'), 10);
 const ALLOW_ON_RETRY = cfg('CLAUDE_ELOQUENT_ALLOW_ON_RETRY', 'CLAUDE_PLUGIN_OPTION_ALLOW_ON_RETRY', '1');
-const EXTRA_SKIP_EXT = (process.env.CLAUDE_ELOQUENT_EXTRA_SKIP_EXT ?? '')
+// CLAUDE_ELOQUENT_EXTRA_SKIP_EXT is the pre-0.2 name, kept as an alias.
+const EXTRA_SKIP = (process.env.CLAUDE_ELOQUENT_EXTRA_SKIP ?? process.env.CLAUDE_ELOQUENT_EXTRA_SKIP_EXT ?? '')
   .split(',').map(s => s.trim().replace(/^\./, '').toLowerCase()).filter(Boolean);
 
 function analysedText(toolName, input) {
@@ -64,9 +65,7 @@ try {
 
   if (event.cwd && existsSync(join(event.cwd, '.claude-eloquent-skip'))) process.exit(0);
 
-  if (isSkippedExt(filePath, EXTRA_SKIP_EXT)) process.exit(0);
-
-  const lang = detectLang(filePath);
+  const lang = detectLang(filePath, EXTRA_SKIP);
   if (!lang) process.exit(0);
 
   const text = analysedText(toolName, input);
