@@ -60,6 +60,7 @@ test-hook:
     echo "$out" | grep -q '"permissionDecision":"deny"' || fail "4 first submit should deny"
     out=$(payload s4 "$commenty" | CLAUDE_ELOQUENT_ALLOW_ON_RETRY=0 run)
     echo "$out" | grep -q '"permissionDecision":"deny"' && ok "4 denied on every submit" || fail "4 second submit should deny too"
+    echo "$out" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("resubmit the same edit") | not' >/dev/null && ok "4 reason omits the retry promise" || fail "4 reason should not promise a retry"
 
     # 5. Below min_chars the ratio check does not apply.
     out=$(payload s5 "$tiny" | run)
@@ -93,6 +94,7 @@ test-hook:
     # 11. The denial carries the measured numbers Claude needs.
     out=$(payload s11 "$commenty" | run)
     echo "$out" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("[0-9]+% comment")' >/dev/null && ok "11 reason quotes the percentage" || fail "11 reason missing percentage"
+    echo "$out" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("resubmit the same edit")' >/dev/null && ok "11 reason offers the retry" || fail "11 reason missing retry sentence"
 
     exit $rc
 

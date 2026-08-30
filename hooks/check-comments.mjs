@@ -117,7 +117,7 @@ try {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: denyReason({ file: filePath, percent, blocks: blockCount, longestBlock }),
+      permissionDecisionReason: denyReason({ file: filePath, percent, blocks: blockCount, longestBlock, allowRetry: bool(ALLOW_ON_RETRY) }),
     },
   }));
   process.exit(0);
