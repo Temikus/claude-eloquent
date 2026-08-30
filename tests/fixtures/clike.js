@@ -1,3 +1,5 @@
+// Expect: blocks 3-4 and 9-10, trailing comment 11, "//" in string 12 ignored.
+
 // First block line one
 // First block line two
 function add(a, b) {

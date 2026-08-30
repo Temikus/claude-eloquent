@@ -8,7 +8,6 @@ How `hooks/comments.mjs` decides what counts as a comment. The scanner is line-b
 | --- | --- |
 | `Edit` | `tool_input.new_string` |
 | `Write` | `tool_input.content` |
-| `MultiEdit` | `tool_input.edits[].new_string`, newline-joined |
 
 `old_string` is never analysed. It is not part of the retry hash either, so Claude re-anchoring the same edit still reads as a retry.
 
@@ -27,7 +26,7 @@ Detection is by extension of `tool_input.file_path`, falling back to the filenam
 | HTML-ish | none | `<!-- -->` | html, htm, vue, svelte, xml |
 | CSS | none | `/* */` | css, scss, less |
 
-Unknown extensions and prose/data extensions (`md`, `mdx`, `txt`, `rst`, `adoc`, `json`, `yaml`, `yml`, `toml`, `csv`, `tsv`, `lock`, `ini`, `cfg`, `conf`, `env`, `properties`, `svg`, `patch`, `diff`, `snap`) exit before any scanning. `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` adds to that list.
+Unknown extensions and prose/data extensions (`md`, `mdx`, `txt`, `rst`, `adoc`, `json`, `yaml`, `yml`, `toml`, `csv`, `tsv`, `lock`, `ini`, `cfg`, `conf`, `env`, `properties`, `svg`, `patch`, `diff`, `snap`) exit before any scanning. `CLAUDE_ELOQUENT_EXTRA_SKIP` adds to that list: an entry is either an extension or the bare name of an extensionless file from the fallback table, so `sql,justfile` skips both. `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` is the former name and still works.
 
 ## Rules
 
@@ -64,6 +63,8 @@ Sentinel path: `${CLAUDE_ELOQUENT_TMP}/sessions/<session_id>/<sha256(file_path +
 - Absent: write it, deny.
 - Present: log `ALLOW (retry)`, exit 0. The sentinel is left in place, so a third identical submit is allowed too.
 
+The key covers the path and the text only, not `tool_name` or `cwd`. An `Edit` that is denied and then resubmitted as a `Write` of the same text to the same path is therefore allowed. That is by design: the text under review is identical, so it is the same retry.
+
 Sentinels older than two hours are pruned on each invocation, and `SessionEnd` removes the session directory outright.
 
 ## Operational limits
@@ -77,3 +78,8 @@ The log is trimmed to `CLAUDE_ELOQUENT_LOG_MAX_LINES` from `log()` itself, but o
 - Multi-line strings outside Python triple quotes and shell heredocs are still untracked, so a comment marker inside a JS template literal can inflate the count. A retry clears it.
 - JSX/TSX `{/* */}` is read as a C-like block comment, which is correct often enough.
 - Heredoc detection matches any `<<` or `<<<` followed by a word, anywhere on a code line, with no check that it is a redirection. So `n=$(( 1 << 2 ))`, `grep foo <<< bar`, and even `x=1  # see <<EOF below` each open a string that runs to the end of the file, and every comment after it goes uncounted. This errs toward allowing the edit, but it disables the check for the rest of the file rather than for one line.
+- Ruby `=begin` is accepted indented, although Ruby itself requires it at column 0.
+- A Rust lifetime (`'a`) opens a phantom quote, so a `//` comment later on that line is missed.
+- An HTML comment not preceded by whitespace (`<div><!-- x -->`) is missed.
+
+The last three err toward allowing the edit, so none is worth code to fix.

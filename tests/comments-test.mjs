@@ -1,9 +1,11 @@
 // Scanner assertions. Expected values are hand-checked against the fixtures;
-// chars are trimmed lengths, so indentation does not move them.
+// chars are trimmed lengths, so indentation does not move them. Each fixture
+// opens with an `Expect:` line naming the lines that should count, which is
+// itself a comment, so the first block below is always that line.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { extractComments, detectLang, isSkippedExt, summarise } from '../hooks/comments.mjs';
+import { extractComments, detectLang, summarise } from '../hooks/comments.mjs';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 let failures = 0;
@@ -33,12 +35,12 @@ function scan(file) {
 
 // Line block, delimited block, trailing comment, and `//` inside a string.
 check('clike.js', scan('clike.js'), {
-  lang: 'c', commentChars: 113, totalChars: 230, blocks: [[1, 2, 46], [7, 2, 51]],
+  lang: 'c', commentChars: 192, totalChars: 309, blocks: [[1, 1, 79], [3, 2, 46], [9, 2, 51]],
 });
 
 // Docstring counts as a block, blank line inside it does not split it.
 check('docstring.py', scan('docstring.py'), {
-  lang: 'py', commentChars: 88, totalChars: 135, blocks: [[2, 4, 39], [9, 2, 49]],
+  lang: 'py', commentChars: 139, totalChars: 186, blocks: [[1, 1, 51], [4, 4, 39], [11, 2, 49]],
 });
 
 // A `SQL = """` assignment is a string, not a docstring: only the docstring
@@ -54,7 +56,7 @@ check('heredoc.sh', scan('heredoc.sh'), {
 
 // SPDX and Copyright lines drop out of both counts.
 check('license.go', scan('license.go'), {
-  lang: 'c', commentChars: 22, totalChars: 71, blocks: [[5, 1, 22]],
+  lang: 'c', commentChars: 84, totalChars: 133, blocks: [[1, 1, 62], [7, 1, 22]],
 });
 
 // Near-misses ("pragmatic", "the copyright holder", "deprecated in v2") count;
@@ -65,16 +67,16 @@ check('markers.js', scan('markers.js'), {
 
 // eslint directives drop out; the prose comment beside them does not.
 check('lint.js', scan('lint.js'), {
-  lang: 'c', commentChars: 30, totalChars: 72, blocks: [[5, 1, 30]],
+  lang: 'c', commentChars: 108, totalChars: 150, blocks: [[1, 1, 78], [7, 1, 30]],
 });
 
 // Shebang excluded, and `$#` is not a comment.
 check('trailing.sh', scan('trailing.sh'), {
-  lang: 'hash', commentChars: 54, totalChars: 117, blocks: [[5, 1, 32]],
+  lang: 'hash', commentChars: 114, totalChars: 177, blocks: [[2, 1, 60], [7, 1, 32]],
 });
 
 check('markup.html', scan('markup.html'), {
-  lang: 'html', commentChars: 75, totalChars: 112, blocks: [[1, 2, 53]],
+  lang: 'html', commentChars: 125, totalChars: 162, blocks: [[1, 1, 50], [3, 2, 53]],
 });
 
 check('empty input', extractComments('', 'c'), { commentChars: 0, totalChars: 0, blocks: [] });
@@ -90,7 +92,8 @@ check('trailing comment is not a block', extractComments('x();  // why\ny();', '
 
 check('detectLang skips prose', [detectLang('a.md'), detectLang('a.json'), detectLang('a.unknownext')], [null, null, null]);
 check('detectLang by filename', [detectLang('Dockerfile'), detectLang('/x/justfile'), detectLang('Gemfile')], ['hash', 'hash', 'rb']);
-check('isSkippedExt honours extras', [isSkippedExt('a.md'), isSkippedExt('a.js'), isSkippedExt('a.js', ['js'])], [true, false, true]);
+check('detectLang honours extra extensions', [detectLang('a.js'), detectLang('a.js', ['js'])], ['c', null]);
+check('detectLang honours extra filenames', [detectLang('/x/justfile', ['justfile']), detectLang('/x/justfile', ['js'])], [null, 'hash']);
 
 check('summarise', summarise({ commentChars: 60, totalChars: 100, blocks: [{ lines: 3 }, { lines: 7 }] }),
   { ratio: 0.6, longestBlock: 7, blockCount: 2 });

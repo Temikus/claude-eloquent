@@ -16,8 +16,10 @@ No API calls, no extra tokens spent on scoring, no dependencies. Just a line-bas
 | Event | Script | Behaviour |
 | --- | --- | --- |
 | `SessionStart` | `hooks/session-context.mjs` | Injects a ~380 char comment-style instruction |
-| `PreToolUse` (`Edit\|Write\|MultiEdit`) | `hooks/check-comments.mjs` | Denies once when the edit is too commenty, allows the identical retry |
+| `PreToolUse` (`Edit\|Write`) | `hooks/check-comments.mjs` | Denies once when the edit is too commenty, allows the identical retry |
 | `SessionEnd` | `hooks/cleanup.mjs` | Removes this session's retry sentinels |
+
+`SessionStart` fires on startup, resume, clear, and compaction. Re-injecting after a compaction is deliberate, since the summary may have dropped the rule.
 
 What Claude sees on a denial:
 
@@ -64,7 +66,8 @@ Environment-only settings:
 | `CLAUDE_ELOQUENT_LOG` | `~/.claude/logs/claude-eloquent.log` |
 | `CLAUDE_ELOQUENT_LOG_MAX_LINES` | `1000` (trim target, applied once the log passes 256 KB) |
 | `CLAUDE_ELOQUENT_TMP` | `~/.claude/tmp/claude-eloquent` |
-| `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` | (empty) comma-separated extensions to ignore |
+| `CLAUDE_ELOQUENT_EXTRA_SKIP` | (empty) comma-separated extensions or extensionless filenames to ignore, e.g. `sql,justfile` |
+| `CLAUDE_ELOQUENT_EXTRA_SKIP_EXT` | (empty) former name of the above, still honoured |
 
 Drop a `.claude-eloquent-skip` file in a project root to disable the plugin for that project.
 
