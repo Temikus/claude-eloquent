@@ -48,6 +48,8 @@ Dropped from **both** `commentChars` and `totalChars`, so they neither trip a de
 - Licence headers in the first 10 lines: `SPDX-`, `Copyright`, `Licensed under`, `All rights reserved`.
 - Lint and tooling directives anywhere: `eslint-`, `noqa`, `nolint`, `prettier-ignore`, `type: ignore`, `pragma`, `TODO(`, `FIXME(`, `@ts-`, `istanbul ignore`, `rubocop:`, `shellcheck `, `golint`, `deprecated:`.
 
+The words are matched on word boundaries, and `Copyright`, `Licensed under`, and `deprecated:` must open the comment (only the comment prefix may precede them). So `// Deprecated: use X` drops out but `// pragmatic`, `// the copyright holder`, and `// deprecated in v2` do not.
+
 ## Thresholds
 
 1. **Ratio** (default on): `commentChars / totalChars > comment_ratio` and `totalChars >= min_chars`. Defaults `0.40` and `200`.

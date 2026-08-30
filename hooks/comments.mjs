@@ -48,8 +48,10 @@ export const SKIP_EXT = new Set([
 
 // Comments that exist for a tool or a lawyer, not for a reader. Excluded from
 // both the comment count and the total, so they neither trip nor mask a denial.
-const LINT_MARKERS = /(eslint-|noqa|nolint|prettier-ignore|type:\s*ignore|pragma|TODO\(|FIXME\(|@ts-|istanbul ignore|rubocop:|shellcheck |golint|deprecated:)/i;
-const LICENSE_MARKERS = /(SPDX-|Copyright|Licensed under|All rights reserved)/i;
+// Anchored: `^\W*` allows the comment prefix before the word, so `// Deprecated:
+// use X` matches and `// this is deprecated: see above` does not.
+const LINT_MARKERS = /(\beslint-|\bnoqa\b|\bnolint\b|prettier-ignore|type:\s*ignore|\bpragma\b|\bTODO\(|\bFIXME\(|@ts-|istanbul ignore|rubocop:|shellcheck\s|\bgolint\b|^\W*deprecated:)/i;
+const LICENSE_MARKERS = /(\bSPDX-|^\W*Copyright\b|^\W*Licensed under\b|\bAll rights reserved\b)/i;
 
 export function detectLang(filePath) {
   if (!filePath) return null;

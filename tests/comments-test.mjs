@@ -57,6 +57,12 @@ check('license.go', scan('license.go'), {
   lang: 'c', commentChars: 22, totalChars: 71, blocks: [[5, 1, 22]],
 });
 
+// Near-misses ("pragmatic", "the copyright holder", "deprecated in v2") count;
+// the anchored directives beside them do not.
+check('markers.js', scan('markers.js'), {
+  lang: 'c', commentChars: 107, totalChars: 134, blocks: [[2, 3, 107]],
+});
+
 // eslint directives drop out; the prose comment beside them does not.
 check('lint.js', scan('lint.js'), {
   lang: 'c', commentChars: 30, totalChars: 72, blocks: [[5, 1, 30]],
