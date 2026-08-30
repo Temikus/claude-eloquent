@@ -52,7 +52,7 @@ Set these in `/plugin` config, or override per shell with the environment variab
 
 Two detectors, either one is enough to trip a denial:
 
-1. **Ratio** (on): comment characters exceed `comment_ratio` of the edit, and the edit is at least `min_chars` long. The floor stops a three-line edit with one comment from tripping it.
+1. **Ratio** (on): comment characters exceed `comment_ratio` of the edit, and the edit has at least `min_chars` characters after shebang, licence, and lint lines are excluded. The floor stops a three-line edit with one comment from tripping it.
 2. **Block lines** (off): a single contiguous comment block is longer than `max_block_lines`.
 
 `allow_on_retry=false` denies every time, which is stricter than it sounds - Claude has no way to force an edit through.
