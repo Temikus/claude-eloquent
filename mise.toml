@@ -1,3 +1,4 @@
 [tools]
 jq = "latest"
 just = "latest"
+python = "3.13"

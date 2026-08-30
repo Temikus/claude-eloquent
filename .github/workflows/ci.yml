@@ -8,21 +8,24 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # Hooks run on whatever Node the user has on PATH, so test the maintained
-        # LTS floor up to current rather than only the newest runtime.
-        node-version: ['20', '22', '24']
+        # Hooks run on whatever Python the user has on PATH, so test the floor up
+        # to current. macOS is here because its stock 3.9 is the reason the hooks
+        # are Python at all.
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.9', '3.11', '3.13']
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-python@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Install jq
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Install just
@@ -44,4 +47,4 @@ jobs:
             echo "test matrix did not succeed: ${{ needs.test.result }}"
             exit 1
           fi
-          echo "all Node versions passed"
+          echo "all Python versions passed"
