@@ -66,9 +66,11 @@ test-hook:
     out=$(payload s5 "$tiny" | run)
     [ -z "$out" ] && ok "5 short edit allowed" || fail "5 expected empty stdout, got: $out"
 
-    # 6. Prose files are skipped before scanning.
-    out=$(payload s6 "$commenty" OLD /tmp/notes.md | run)
-    [ -z "$out" ] && grep -q 'SKIP: doc ext' "$tmpdir/log" && ok "6 markdown skipped" || fail "6 expected doc-ext skip"
+    # 6. Prose files are skipped before scanning, and log nothing: the line fired
+    # on nearly every call and carried no decision.
+    log6="$tmpdir/log6"
+    out=$(payload s6 "$commenty" OLD /tmp/notes.md | CLAUDE_ELOQUENT_LOG="$log6" run)
+    [ -z "$out" ] && [ ! -s "$log6" ] && ok "6 markdown skipped silently" || fail "6 expected silent doc-ext skip"
 
     # 7. MultiEdit concatenates its edits, so one commenty edit is enough.
     out=$(jq -n --arg text "$commenty" '{session_id:"s7", tool_name:"MultiEdit", cwd:"/tmp", tool_input:{file_path:"/tmp/sample.js", edits:[{old_string:"a",new_string:"const a = 1;"},{old_string:"b",new_string:$text},{old_string:"c",new_string:"const c = 3;"}]}}' | run)
@@ -101,6 +103,17 @@ test-hook:
     log12="$tmpdir/log12"
     out=$(printf '{"session_id":"s12","tool_name":"Edit","cwd":"/tmp","tool_input":{"file_path":"/tmp/sample.js","old_string":"OLD","new_string":"%s"}}' "$big" | CLAUDE_ELOQUENT_LOG="$log12" run)
     [ -z "$out" ] && grep -q 'SKIP: payload' "$log12" && ok "12 oversized payload skipped" || fail "12 expected payload skip"
+
+    # 13. Rotation runs from log(), so a session that only ever skips still trims.
+    log13="$tmpdir/log13"
+    # Lines are sized so that MAX_LINES of them still exceed the 256KB rotation
+    # guard, which makes the final count exact rather than "somewhere above 100".
+    line=$(head -c 3000 /dev/zero | tr '\0' 'y')
+    CLAUDE_ELOQUENT_LOG="$log13" CLAUDE_ELOQUENT_LOG_MAX_LINES=100 node -e '
+      const { log } = await import("./hooks/common.mjs");
+      for (let i = 0; i < 150; i++) log("t", process.argv[1]);
+    ' "$line"
+    [ "$(wc -l < "$log13")" -eq 100 ] && ok "13 log trimmed to max lines" || fail "13 expected 100 lines, got $(wc -l < "$log13")"
 
     exit $rc
 

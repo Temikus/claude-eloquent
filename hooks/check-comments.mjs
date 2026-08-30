@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { cfg, bool, log, rotateLog, readStdin, validSessionId, SESSIONS_DIR, SENTINEL_TTL_MS } from './common.mjs';
+import { cfg, bool, log, readStdin, validSessionId, SESSIONS_DIR, SENTINEL_TTL_MS } from './common.mjs';
 import { detectLang, isSkippedExt, extractComments, summarise } from './comments.mjs';
 import { denyReason } from './guidance.mjs';
 
@@ -61,15 +61,9 @@ try {
 
   if (!filePath || typeof filePath !== 'string') process.exit(0);
 
-  if (event.cwd && existsSync(join(event.cwd, '.claude-eloquent-skip'))) {
-    log('check', 'SKIP: disabled via .claude-eloquent-skip');
-    process.exit(0);
-  }
+  if (event.cwd && existsSync(join(event.cwd, '.claude-eloquent-skip'))) process.exit(0);
 
-  if (isSkippedExt(filePath, EXTRA_SKIP_EXT)) {
-    log('check', `SKIP: doc ext ${filePath}`);
-    process.exit(0);
-  }
+  if (isSkippedExt(filePath, EXTRA_SKIP_EXT)) process.exit(0);
 
   const lang = detectLang(filePath);
   if (!lang) process.exit(0);
@@ -83,8 +77,6 @@ try {
   const ratioTripped = result.totalChars >= MIN_CHARS && ratio > RATIO;
   const blockTripped = bool(CHECK_BLOCK_LINES) && longestBlock > MAX_BLOCK_LINES;
   if (!ratioTripped && !blockTripped) process.exit(0);
-
-  rotateLog();
 
   const sessionId = event.session_id ?? '';
   const percent = Math.round(ratio * 100);
