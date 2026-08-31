@@ -1,4 +1,4 @@
 [tools]
 jq = "latest"
 just = "latest"
-python = "3.13"
+python = "3.14.7"
