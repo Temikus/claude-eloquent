@@ -56,6 +56,7 @@ Set these in `/plugin` config, or override per shell with the environment variab
 | `disabled` | `false` | `CLAUDE_ELOQUENT_DISABLED` |
 | `comment_ratio` | `0.40` | `CLAUDE_ELOQUENT_RATIO` |
 | `min_chars` | `200` | `CLAUDE_ELOQUENT_MIN_CHARS` |
+| `min_comment_chars` | `200` | `CLAUDE_ELOQUENT_MIN_COMMENT_CHARS` |
 | `check_block_lines` | `false` | `CLAUDE_ELOQUENT_CHECK_BLOCK_LINES` |
 | `max_block_lines` | `6` | `CLAUDE_ELOQUENT_MAX_BLOCK_LINES` |
 | `session_context` | `true` | `CLAUDE_ELOQUENT_SESSION_CONTEXT` |
@@ -63,7 +64,7 @@ Set these in `/plugin` config, or override per shell with the environment variab
 
 Two detectors, either one is enough to trip a denial:
 
-1. **Ratio** (on): comment characters exceed `comment_ratio` of the edit, and the edit has at least `min_chars` characters after shebang, licence, and lint lines are excluded. The floor stops a three-line edit with one comment from tripping it.
+1. **Ratio** (on): comment characters exceed `comment_ratio` of the edit, the edit has at least `min_chars` characters, and the comments alone have at least `min_comment_chars`, all measured after shebang, licence, and lint lines are excluded. The comment floor stops a small edit with a one- or two-line comment from tripping it: a ratio means little when there is barely any text on either side.
 2. **Block lines** (off): a single contiguous comment block is longer than `max_block_lines`.
 
 `allow_on_retry=false` denies every time, which is stricter than it sounds - Claude has no way to force an edit through.

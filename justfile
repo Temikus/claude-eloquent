@@ -29,6 +29,7 @@ test-hook:
     commenty=$(cat tests/samples/commenty.js)
     tiny=$(cat tests/samples/tiny.js)
     blocky=$(cat tests/samples/blocky.js)
+    short=$(cat tests/samples/short-comment.js)
 
     payload() {
       jq -n --arg sid "$1" --arg text "$2" --arg old "${3:-OLD}" --arg fp "${4:-/tmp/sample.js}" \
@@ -61,6 +62,13 @@ test-hook:
     # 5. Below min_chars the ratio check does not apply.
     out=$(payload s5 "$tiny" | run)
     [ -z "$out" ] && ok "5 short edit allowed" || fail "5 expected empty stdout, got: $out"
+
+    # 5b. Above min_chars and over the ratio, but the comment itself is under
+    # min_comment_chars: a two-line comment on a small edit is not a wall of prose.
+    out=$(payload s5b "$short" | run)
+    [ -z "$out" ] && ok "5b short comment on small edit allowed" || fail "5b expected empty stdout, got: $out"
+    out=$(payload s5c "$short" | CLAUDE_ELOQUENT_MIN_COMMENT_CHARS=0 run)
+    echo "$out" | grep -q '"permissionDecision":"deny"' && ok "5b floor is configurable" || fail "5b expected deny with floor off, got: $out"
 
     # 6. Prose files are skipped before scanning, and log nothing: the line fired
     # on nearly every call and carried no decision.

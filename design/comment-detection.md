@@ -52,7 +52,7 @@ The words are matched on word boundaries, and `Copyright`, `Licensed under`, and
 
 ## Thresholds
 
-1. **Ratio** (default on): `commentChars / totalChars > comment_ratio` and `totalChars >= min_chars`. Defaults `0.40` and `200`.
+1. **Ratio** (default on): `commentChars / totalChars > comment_ratio`, `totalChars >= min_chars`, and `commentChars >= min_comment_chars`. Defaults `0.40`, `200`, and `200`. The comment floor is what keeps a two-line comment on a five-line edit from reading as a wall of prose.
 2. **Block lines** (default off): any block with `lines > max_block_lines`. Default `6`.
 
 Either firing is a candidate denial.
