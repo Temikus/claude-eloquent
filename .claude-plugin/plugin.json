@@ -38,6 +38,13 @@
       "default": 200,
       "min": 0
     },
+    "min_comment_chars": {
+      "type": "number",
+      "title": "Minimum comment size",
+      "description": "Skip the ratio check when the edit holds fewer comment characters than this, so a one- or two-line comment never trips it however small the edit. Default is 200",
+      "default": 200,
+      "min": 0
+    },
     "check_block_lines": {
       "type": "boolean",
       "title": "Check comment block length",

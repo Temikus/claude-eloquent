@@ -31,6 +31,7 @@ from guidance import deny_reason  # noqa: E402
 DISABLED = cfg("CLAUDE_ELOQUENT_DISABLED", "CLAUDE_PLUGIN_OPTION_DISABLED", "0")
 RATIO = float(cfg("CLAUDE_ELOQUENT_RATIO", "CLAUDE_PLUGIN_OPTION_COMMENT_RATIO", "0.40"))
 MIN_CHARS = int(cfg("CLAUDE_ELOQUENT_MIN_CHARS", "CLAUDE_PLUGIN_OPTION_MIN_CHARS", "200"))
+MIN_COMMENT_CHARS = int(cfg("CLAUDE_ELOQUENT_MIN_COMMENT_CHARS", "CLAUDE_PLUGIN_OPTION_MIN_COMMENT_CHARS", "200"))
 CHECK_BLOCK_LINES = cfg("CLAUDE_ELOQUENT_CHECK_BLOCK_LINES", "CLAUDE_PLUGIN_OPTION_CHECK_BLOCK_LINES", "0")
 MAX_BLOCK_LINES = int(cfg("CLAUDE_ELOQUENT_MAX_BLOCK_LINES", "CLAUDE_PLUGIN_OPTION_MAX_BLOCK_LINES", "6"))
 ALLOW_ON_RETRY = cfg("CLAUDE_ELOQUENT_ALLOW_ON_RETRY", "CLAUDE_PLUGIN_OPTION_ALLOW_ON_RETRY", "1")
@@ -114,7 +115,13 @@ try:
     longest_block = stats_summary["longest_block"]
     block_count = stats_summary["block_count"]
 
-    ratio_tripped = result["total_chars"] >= MIN_CHARS and ratio > RATIO
+    # Ratio is noise on a small edit: one 90-char comment over two lines of code
+    # is 45%. The comment floor means only a wall of prose can trip it.
+    ratio_tripped = (
+        result["total_chars"] >= MIN_CHARS
+        and result["comment_chars"] >= MIN_COMMENT_CHARS
+        and ratio > RATIO
+    )
     block_tripped = as_bool(CHECK_BLOCK_LINES) and longest_block > MAX_BLOCK_LINES
     if not ratio_tripped and not block_tripped:
         sys.exit(0)

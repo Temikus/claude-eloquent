@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A small edit with a one- or two-line comment no longer trips the ratio check. New `min_comment_chars` option (default `200`, env `CLAUDE_ELOQUENT_MIN_COMMENT_CHARS`) requires that much comment text before the ratio applies, since a percentage means little on a 250-character edit.
+
 ## [0.2.0] - 2026-08-30
 
 ### Changed
