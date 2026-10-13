@@ -1,4 +1,9 @@
 set shell := ["bash", "-uc"]
+set allow-duplicate-recipes
+
+# Shared recipes from the Temikus/.github Copier template.
+# The local release below overrides the shared one until plugin tag CI exists.
+import 'just/common.just'
 
 default:
     @just --list
