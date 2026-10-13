@@ -1,0 +1,37 @@
+# Generated from the Temikus/.github Copier template. Edit it there, not here.
+
+# Tag and push a release (usage: just release patch|minor|major)
+release bump:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$branch" != "main" ]; then
+        echo "Releases must run from main (on: ${branch})"; exit 1
+    fi
+    git fetch --tags origin main
+    # Equal, not just "not behind": an unpushed local commit would get tagged too.
+    if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+        echo "Local main differs from origin/main; pull or push first"; exit 1
+    fi
+    latest=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+    if [ -z "$latest" ]; then
+        latest="v0.0.0"
+    fi
+    # Strip leading 'v' and split
+    ver="${latest#v}"
+    IFS='.' read -r major minor patch <<< "$ver"
+    case "{{ bump }}" in
+        patch) patch=$((patch + 1)) ;;
+        minor) minor=$((minor + 1)); patch=0 ;;
+        major) major=$((major + 1)); minor=0; patch=0 ;;
+        *) echo "Usage: just release [patch|minor|major]"; exit 1 ;;
+    esac
+    tag="v${major}.${minor}.${patch}"
+    echo "Tagging ${tag} (previous: ${latest})"
+    git tag -a "$tag" -m "$tag"
+    git push origin "$tag"
+    echo "Released ${tag}"
+
+# Pull the latest template now, without waiting for Renovate
+sync-common:
+    uvx copier update --defaults
